@@ -1,0 +1,91 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+jobs:
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: empleados_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Correr tests de Maven
+        env:
+          DB_URL: jdbc:postgresql://localhost:5432/empleados_db
+          DB_USERNAME: postgres
+          DB_PASSWORD: postgres
+          APP_SECURITY_USER: admin
+          APP_SECURITY_PASSWORD: admin123
+        run: mvn -B verify
+
+  cypress:
+    name: Cypress E2E
+    runs-on: ubuntu-latest
+    needs: backend-test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Levantar servicios con Docker Compose
+        run: |
+          docker compose up -d --build
+          echo "Esperando que nginx arranque..."
+          sleep 40
+
+      - name: Verificar que la app responde
+        run: curl -f http://localhost || (docker compose logs && exit 1)
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar Cypress
+        run: |
+          cd frontend
+          npm install cypress --save-dev
+
+      - name: Correr pruebas Cypress
+        run: |
+          cd frontend
+          npx cypress run
+
+      - name: Subir screenshots si falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots
+          path: frontend/cypress/screenshots
+
+      - name: Bajar Docker Compose
+        if: always()
+        run: docker compose down
