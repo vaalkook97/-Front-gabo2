@@ -1,0 +1,75 @@
+<main class="page">
+  <header class="header">
+    <h1>Gestión de Empleados</h1>
+    <div class="header-actions">
+      <button type="button" (click)="cargarEmpleados()">Recargar</button>
+      <button type="button" (click)="logout()">Cerrar sesión</button>
+    </div>
+  </header>
+
+  <section class="card">
+    <h2>Nuevo empleado</h2>
+    <form [formGroup]="form" (ngSubmit)="crearEmpleado()" class="form-grid">
+      <label>
+        Nombre
+        <input type="text" formControlName="nombre" />
+      </label>
+      <label>
+        Dirección
+        <input type="text" formControlName="direccion" />
+      </label>
+      <label>
+        Teléfono
+        <input type="text" formControlName="telefono" />
+      </label>
+      <label>
+        Correo
+        <input type="email" formControlName="correo" />
+      </label>
+
+      <button type="submit" [disabled]="form.invalid || guardando">
+        @if (guardando) {
+          Guardando...
+        } @else {
+          Crear empleado
+        }
+      </button>
+    </form>
+  </section>
+
+  @if (mensajeError) {
+    <p class="error">{{ mensajeError }}</p>
+  }
+
+  <section class="card">
+    <h2>Listado</h2>
+    @if (cargando) {
+      <p>Cargando...</p>
+    } @else {
+      <table>
+        <thead>
+          <tr>
+            <th>Clave</th>
+            <th>Nombre</th>
+            <th>Dirección</th>
+            <th>Teléfono</th>
+            <th>Correo</th>
+            <th>Versión</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (empleado of empleados; track empleado.clave) {
+            <tr>
+              <td>{{ empleado.clave }}</td>
+              <td>{{ empleado.nombre }}</td>
+              <td>{{ empleado.direccion }}</td>
+              <td>{{ empleado.telefono }}</td>
+              <td>{{ empleado.correo }}</td>
+              <td>{{ empleado.version }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+</main>
